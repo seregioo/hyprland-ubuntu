@@ -10,19 +10,28 @@ echo "============================================"
 echo ""
 
 echo ">>> Phase 0: Installing system build dependencies..."
+# Add GCC toolchain PPA for gcc-15/g++-15 (C++26 support)
+if ! apt-cache policy gcc-15 2>/dev/null | grep -q "Candidate"; then
+    sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+    sudo apt-get update
+fi
+
 sudo apt-get install -y \
     build-essential git wget pkg-config flex bison \
+    gcc-15 g++-15 \
+    python3-venv python3-jinja2 \
     libglib2.0-dev libcairo2-dev libpango1.0-dev libgdk-pixbuf-2.0-dev \
-    libwayland-dev libwayland-client0 libwayland-server0 \
+    libwayland-dev libwayland-bin wayland-protocols \
     libxcb1-dev libxcb-composite0-dev libxcb-render0-dev libxcb-xfixes0-dev \
     libxcb-icccm4-dev libxcb-res0-dev libxcb-xinput-dev libxcb-randr0-dev \
+    libxcb-xkb-dev libicu-dev \
     libdrm-dev libgbm-dev libseat-dev libudev-dev libsystemd-dev \
     libpixman-1-dev libvulkan-dev libegl-dev libgles2-mesa-dev \
     libinput-dev libxml2-dev libxcursor-dev \
     libfontconfig-dev libffi-dev uuid-dev \
     librsvg2-dev libjpeg-dev libwebp-dev libpng-dev libmagic-dev \
-    libglib2.0-dev libre2-dev libpugixml-dev \
-    glslang-dev glslang-tools \
+    libre2-dev libpugixml-dev liblz4-dev \
+    glslang-dev glslang-tools scdoc \
     hwdata 2>&1 | tail -5
 
 # Clean stale /usr/local libs that conflict with our builds
