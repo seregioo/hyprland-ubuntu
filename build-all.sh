@@ -107,7 +107,7 @@ echo "--- Optional extras ---"
 echo "The following can also be built as .deb packages:"
 echo "  1) rofi-wayland  - Application launcher (Wayland fork)"
 echo "  2) hyprlock      - Hyprland lock screen"
-echo "  3) mako          - Notification daemon"
+echo "  3) dunst         - Notification daemon"
 echo "  4) awww          - Animated wallpaper daemon"
 echo ""
 read -p "Install extras? [y/N]: " answer
