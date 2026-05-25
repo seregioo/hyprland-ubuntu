@@ -9,8 +9,20 @@ PKG_DIR="$DEPS_DIR/${PKG_NAME}_${VERSION}_amd64"
 
 echo "=== Building rofi-wayland $VERSION as .deb package ==="
 
-# Build (already done if build/ exists)
-cd "$DEPS_DIR/rofi-wayland"
+if dpkg -l "$PKG_NAME" 2>/dev/null | grep -q "^ii"; then
+    echo "$PKG_NAME already installed"
+    exit 0
+fi
+
+cd "$DEPS_DIR"
+if [ ! -d "rofi-wayland" ]; then
+    git clone --depth 1 --branch "${VERSION}+wayland1" https://github.com/lbonn/rofi.git rofi-wayland
+    cd rofi-wayland
+    git submodule update --init --depth 1
+else
+    cd rofi-wayland
+fi
+
 if [ ! -f build/rofi ]; then
     meson setup build --prefix=/usr --buildtype=release
     ninja -C build

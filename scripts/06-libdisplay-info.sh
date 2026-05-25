@@ -1,24 +1,28 @@
 #!/bin/bash
 set -e
-source "$(dirname "$0")/env.sh"
+source "$(dirname "$0")/pkg-helper.sh"
 
-echo "=== Building libdisplay-info 0.2.0 ==="
-cd "$DEPS_DIR"
+PKG=libdisplay-info-hypr
+VER=0.2.0
 
-VERSION="0.2.0"
-if pkg-config --exists libdisplay-info 2>/dev/null; then
-    echo "libdisplay-info already satisfied: $(pkg-config --modversion libdisplay-info)"
+if dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
+    echo "$PKG already installed"
     exit 0
 fi
 
-if [ ! -d "libdisplay-info-$VERSION" ]; then
-    wget -q --show-progress "https://gitlab.freedesktop.org/emersion/libdisplay-info/-/releases/$VERSION/downloads/libdisplay-info-$VERSION.tar.xz"
-    tar -xf "libdisplay-info-$VERSION.tar.xz"
+cd "$DEPS_DIR"
+if [ ! -d "libdisplay-info-$VER" ]; then
+    git -c 'http.version=HTTP/1.1' clone --depth 1 --branch "$VER" https://gitlab.freedesktop.org/emersion/libdisplay-info.git "libdisplay-info-$VER" || \
+    GIT_SSH_COMMAND="ssh -4" git clone --depth 1 --branch "$VER" https://gitlab.freedesktop.org/emersion/libdisplay-info.git "libdisplay-info-$VER"
 fi
 
-cd "libdisplay-info-$VERSION"
-meson setup build --prefix="$PREFIX" --buildtype=release
+cd "libdisplay-info-$VER"
+rm -rf build
+meson setup build --prefix=/usr --buildtype=release
 ninja -C build
-ninja -C build install
 
-echo "=== libdisplay-info installed: $(pkg-config --modversion libdisplay-info) ==="
+STAGE="$DEPS_DIR/${PKG}_${VER}_amd64"
+rm -rf "$STAGE"
+DESTDIR="$STAGE" ninja -C build install
+
+make_deb "$PKG" "$VER" "EDID and DisplayID library (Hyprland build)" "$STAGE"

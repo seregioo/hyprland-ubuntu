@@ -1,46 +1,55 @@
 #!/bin/bash
 set -e
-source "$(dirname "$0")/env.sh"
+source "$(dirname "$0")/pkg-helper.sh"
 
-echo "=== Building Lua 5.5 ==="
-cd "$DEPS_DIR"
+PKG=lua5.5-hypr
+VER=5.5.0
 
-if pkg-config --atleast-version=5.5 lua 2>/dev/null || pkg-config --exists lua5.5 2>/dev/null || pkg-config --exists lua55 2>/dev/null; then
-    echo "Lua 5.5 already satisfied"
+if dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
+    echo "$PKG already installed"
     exit 0
 fi
 
+cd "$DEPS_DIR"
 if [ ! -d "lua-5.5.0" ]; then
-    # Lua 5.5 is in work version (alpha), get from git
     git clone --depth 1 https://github.com/lua/lua.git lua-5.5.0
 fi
 
 cd lua-5.5.0
-# Build lua
-make PLAT=linux-readline INSTALL_TOP="$PREFIX" CC="$CC" -j$(nproc) || \
-make PLAT=linux INSTALL_TOP="$PREFIX" CC="$CC" -j$(nproc)
+make PLAT=linux CC="$CC" -j$(nproc)
 
-# Manual install since this repo has no install target
-cp -f lua "$PREFIX/bin/"
-cp -f liblua.a "$PREFIX/lib/"
-cp -f lua.h luaconf.h lualib.h lauxlib.h "$PREFIX/include/"
+# Manual staging
+STAGE="$DEPS_DIR/${PKG}_${VER}_amd64"
+rm -rf "$STAGE"
+mkdir -p "$STAGE/usr/bin" "$STAGE/usr/lib" "$STAGE/usr/include" "$STAGE/usr/lib/pkgconfig"
 
-# Create pkg-config file
-cat > "$PREFIX/lib/pkgconfig/lua5.5.pc" << EOF
-prefix=$PREFIX
-exec_prefix=\${prefix}
-libdir=\${exec_prefix}/lib
-includedir=\${prefix}/include
+cp lua "$STAGE/usr/bin/"
+cp liblua.a "$STAGE/usr/lib/"
+cp lua.h luaconf.h lualib.h lauxlib.h "$STAGE/usr/include/"
+
+# lua.hpp wrapper
+cat > "$STAGE/usr/include/lua.hpp" << 'EOF'
+extern "C" {
+#include "lua.h"
+#include "lualib.h"
+#include "lauxlib.h"
+}
+EOF
+
+# pkg-config
+cat > "$STAGE/usr/lib/pkgconfig/lua5.5.pc" << 'EOF'
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
 
 Name: Lua
 Description: Lua 5.5
 Version: 5.5.0
-Libs: -L\${libdir} -llua -lm
-Cflags: -I\${includedir}
+Libs: -L${libdir} -llua -lm
+Cflags: -I${includedir}
 EOF
+cp "$STAGE/usr/lib/pkgconfig/lua5.5.pc" "$STAGE/usr/lib/pkgconfig/lua55.pc"
+cp "$STAGE/usr/lib/pkgconfig/lua5.5.pc" "$STAGE/usr/lib/pkgconfig/lua.pc"
 
-# Also create lua.pc symlink
-cp "$PREFIX/lib/pkgconfig/lua5.5.pc" "$PREFIX/lib/pkgconfig/lua55.pc"
-cp "$PREFIX/lib/pkgconfig/lua5.5.pc" "$PREFIX/lib/pkgconfig/lua.pc"
-
-echo "=== Lua installed ==="
+make_deb "$PKG" "$VER" "Lua 5.5 language runtime (Hyprland build)" "$STAGE"

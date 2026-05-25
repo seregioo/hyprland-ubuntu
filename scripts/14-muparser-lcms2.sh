@@ -1,40 +1,42 @@
 #!/bin/bash
 set -e
-source "$(dirname "$0")/env.sh"
-
-echo "=== Building muparser and lcms2 ==="
-cd "$DEPS_DIR"
+source "$(dirname "$0")/pkg-helper.sh"
 
 # --- muparser ---
-if ! pkg-config --exists muparser 2>/dev/null; then
-    echo "Building muparser..."
+PKG=muparser-hypr
+VER=2.3.5
+if ! dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
+    cd "$DEPS_DIR"
     if [ ! -d "muparser" ]; then
-        git clone --depth 1 --branch v2.3.5 https://github.com/beltoforion/muparser.git
+        git clone --depth 1 --branch "v$VER" https://github.com/beltoforion/muparser.git
     fi
     cd muparser
-    cmake -B build -DCMAKE_INSTALL_PREFIX="$PREFIX" -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=OFF -DENABLE_OPENMP=OFF
+    cmake -B build -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DENABLE_SAMPLES=OFF -DENABLE_OPENMP=OFF
     cmake --build build -j$(nproc)
-    cmake --install build
-    cd "$DEPS_DIR"
-    echo "muparser installed: $(pkg-config --modversion muparser)"
+    STAGE="$DEPS_DIR/${PKG}_${VER}_amd64"
+    rm -rf "$STAGE"
+    DESTDIR="$STAGE" cmake --install build
+    make_deb "$PKG" "$VER" "Mathematical expression parser library" "$STAGE"
 else
-    echo "muparser already satisfied: $(pkg-config --modversion muparser)"
+    echo "$PKG already installed"
 fi
 
 # --- lcms2 ---
-if ! pkg-config --exists lcms2 2>/dev/null; then
-    echo "Building lcms2..."
+PKG=lcms2-hypr
+VER=2.16
+if ! dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
+    cd "$DEPS_DIR"
     if [ ! -d "Little-CMS" ]; then
         git clone --depth 1 --branch lcms2.16 https://github.com/mm2/Little-CMS.git
     fi
     cd Little-CMS
-    meson setup build --prefix="$PREFIX" --buildtype=release
+    rm -rf build
+    meson setup build --prefix=/usr --buildtype=release
     ninja -C build
-    ninja -C build install
-    cd "$DEPS_DIR"
-    echo "lcms2 installed: $(pkg-config --modversion lcms2)"
+    STAGE="$DEPS_DIR/${PKG}_${VER}_amd64"
+    rm -rf "$STAGE"
+    DESTDIR="$STAGE" ninja -C build install
+    make_deb "$PKG" "$VER" "Little CMS 2 color management library" "$STAGE"
 else
-    echo "lcms2 already satisfied: $(pkg-config --modversion lcms2)"
+    echo "$PKG already installed"
 fi
-
-echo "=== muparser and lcms2 done ==="
