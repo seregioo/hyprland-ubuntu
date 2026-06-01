@@ -4,8 +4,16 @@ source "$(dirname "$0")/pkg-helper.sh"
 
 PKG=hyprland
 VER=0.55.2
-
-if dpkg -l "$PKG" 2>/dev/null | grep -q "^ii.*$VER"; then
+if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
+    NEW_VER=$(get_latest_version https://github.com/hyprwm/Hyprland.git v)
+    if [[ -n "$NEW_VER" ]]; then VER="$NEW_VER"; fi
+    if [[ "$(installed_version $PKG)" == "$VER" ]]; then
+        echo "$PKG: already at $VER, skipping"
+        exit 0
+    fi
+    echo "$PKG: updating to $VER"
+    rm -rf "$BASE_DIR/HyprSource"
+elif dpkg -l "$PKG" 2>/dev/null | grep -q "^ii.*$VER"; then
     echo "$PKG $VER already installed"
     exit 0
 fi

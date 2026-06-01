@@ -4,8 +4,16 @@ source "$(dirname "$0")/pkg-helper.sh"
 
 PKG=libxkbcommon-hypr
 VER=1.13.1
-
-if dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
+if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
+    NEW_VER=$(get_latest_version https://github.com/xkbcommon/libxkbcommon.git xkbcommon-)
+    if [[ -n "$NEW_VER" ]]; then VER="$NEW_VER"; fi
+    if [[ "$(installed_version $PKG)" == "$VER" ]]; then
+        echo "$PKG: already at $VER, skipping"
+        exit 0
+    fi
+    echo "$PKG: updating to $VER"
+    rm -rf "$DEPS_DIR/libxkbcommon-xkbcommon-$VER" "$DEPS_DIR/xkbcommon-$VER.tar.gz"
+elif dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
     echo "$PKG already installed"
     exit 0
 fi

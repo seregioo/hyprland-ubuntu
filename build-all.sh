@@ -2,11 +2,22 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/scripts" && pwd)"
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "============================================"
-echo "  Hyprland v0.55.2 Full Build for Ubuntu 24.04"
-echo "  Produces .deb packages in packages/"
-echo "============================================"
+export UPDATE_MODE=0
+rm -f "$BASE_DIR/.deferred-debs"
+if [[ "${1:-}" == "--update" ]]; then
+    UPDATE_MODE=1
+    echo "============================================"
+    echo "  Hyprland UPDATING to latest versions"
+    echo "  Produces .deb packages in packages/"
+    echo "============================================"
+else
+    echo "============================================"
+    echo "  Hyprland Full Build for Ubuntu 24.04"
+    echo "  Produces .deb packages in packages/"
+    echo "============================================"
+fi
 echo ""
 
 echo ">>> Phase 0: Installing system build dependencies..."
@@ -54,6 +65,7 @@ build_tools=(
 
 # Runtime libraries (packaged as .deb)
 runtime_libs=(
+    "03c-wayland.sh"
     "04-xkbcommon.sh"
     "05-libinput.sh"
     "06-libdisplay-info.sh"
@@ -102,13 +114,35 @@ echo "  ALL DONE! Packages in: $(dirname $SCRIPT_DIR)/packages/"
 echo "============================================"
 ls "$(dirname $SCRIPT_DIR)/packages/"
 
+# Install deferred debs (update mode)
+DEFERRED_DEBS="$BASE_DIR/.deferred-debs"
+if [[ -f "$DEFERRED_DEBS" ]]; then
+    DEBS=$(cat "$DEFERRED_DEBS" | sort -u)
+    if [[ -n "$DEBS" ]]; then
+        echo ""
+        echo ">>> Installing all updated packages..."
+        sudo dpkg --force-overwrite -i $DEBS
+        rm -f "$DEFERRED_DEBS"
+        echo ""
+        if pgrep -x Hyprland > /dev/null; then
+            echo "Hyprland is running. Restart required for changes to take effect."
+            read -p "Restart Hyprland now? [y/N]: " restart
+            if [[ "$restart" =~ ^[Yy]$ ]]; then
+                hyprctl dispatch exit
+            fi
+        fi
+    else
+        rm -f "$DEFERRED_DEBS"
+    fi
+fi
+
 echo ""
 echo "--- Optional extras ---"
 echo "The following can also be built as .deb packages:"
-echo "  1) rofi-wayland  - Application launcher (Wayland fork)"
-echo "  2) hyprlock      - Hyprland lock screen"
-echo "  3) dunst         - Notification daemon"
-echo "  4) awww          - Animated wallpaper daemon"
+echo "  1) rofi-wayland  - Window switcher, app launcher (Wayland fork)"
+echo "  2) hyprlock      - Hyprland's GPU-accelerated screen locker"
+echo "  3) dunst         - Lightweight notification daemon"
+echo "  4) awww          - Animated wallpaper daemon for Wayland"
 echo ""
 read -p "Install extras? [y/N]: " answer
 if [[ "$answer" =~ ^[Yy]$ ]]; then

@@ -1,45 +1,28 @@
 #!/bin/bash
 set -e
 
-echo "=== Hyprland post-install: GDM + wayland-server setup ==="
+echo "=== Hyprland post-install ==="
 
-# Only apply workaround if system wayland-server is older than 1.23.1
-SYSTEM_WL_VER=$(pkg-config --modversion wayland-server 2>/dev/null || echo "0")
-NEEDED_SO="/usr/lib/x86_64-linux-gnu/libwayland-server.so.0.23.1"
-
-if [ -f "$NEEDED_SO" ] || [ -f "/usr/lib/x86_64-linux-gnu/hyprland/libwayland-server.so.0.23.1" ]; then
-    if [ -f /usr/lib/x86_64-linux-gnu/libwayland-server.so.0.22.0 ]; then
-        echo "System has old wayland-server (0.22.0), applying workaround..."
-
-        sudo mkdir -p /usr/lib/x86_64-linux-gnu/hyprland
-        [ -f "$NEEDED_SO" ] && sudo mv "$NEEDED_SO" /usr/lib/x86_64-linux-gnu/hyprland/
-
-        sudo ln -sf libwayland-server.so.0.22.0 /usr/lib/x86_64-linux-gnu/libwayland-server.so.0
-        sudo ldconfig
-
-        sudo tee /usr/local/bin/start-hyprland-wrapper > /dev/null << 'EOF'
-#!/bin/sh
-export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/hyprland/libwayland-server.so.0.23.1
-exec start-hyprland "$@"
+# Create desktop session entry if hyprland deb didn't include one
+if [ ! -f /usr/share/wayland-sessions/hyprland.desktop ]; then
+    sudo mkdir -p /usr/share/wayland-sessions
+    sudo tee /usr/share/wayland-sessions/hyprland.desktop > /dev/null << 'EOF'
+[Desktop Entry]
+Name=Hyprland
+Comment=An intelligent dynamic tiling Wayland compositor
+Exec=Hyprland
+Type=Application
+DesktopNames=Hyprland
 EOF
-        sudo chmod +x /usr/local/bin/start-hyprland-wrapper
-        sudo sed -i 's|Exec=.*|Exec=/usr/local/bin/start-hyprland-wrapper|' /usr/share/wayland-sessions/hyprland.desktop
-
-        echo "Workaround applied."
-    else
-        echo "No old wayland-server found, no workaround needed."
-    fi
-else
-    echo "Newer wayland-server not present, skipping."
+    echo "Created /usr/share/wayland-sessions/hyprland.desktop"
 fi
 
-echo ""
-echo "NOTE: If /etc/gdm3/custom.conf has AutomaticLoginEnable = true,"
-echo "you must set it to false at least once and restart GDM so the"
-echo "greeter registers properly. After that you can re-enable it:"
-echo ""
-echo "  sudo sed -i 's/AutomaticLoginEnable = true/AutomaticLoginEnable = false/' /etc/gdm3/custom.conf"
-echo "  sudo systemctl restart gdm"
-echo "  # Log in, then re-enable:"
-echo "  sudo sed -i 's/AutomaticLoginEnable = false/AutomaticLoginEnable = true/' /etc/gdm3/custom.conf"
-echo ""
+# Undo old workaround if present
+if [ -f /usr/lib/x86_64-linux-gnu/hyprland/libwayland-server.so.0.23.1 ]; then
+    sudo mv /usr/lib/x86_64-linux-gnu/hyprland/libwayland-server.so.0.23.1 /usr/lib/x86_64-linux-gnu/
+    sudo ln -sf libwayland-server.so.0.23.1 /usr/lib/x86_64-linux-gnu/libwayland-server.so.0
+    sudo ldconfig
+    echo "Restored wayland-server 1.23.1 (removed old workaround)"
+fi
+
+echo "Done."

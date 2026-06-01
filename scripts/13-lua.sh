@@ -4,8 +4,14 @@ source "$(dirname "$0")/pkg-helper.sh"
 
 PKG=lua5.5-hypr
 VER=5.5.0
-
-if dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
+if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
+    if dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
+        echo "$PKG: already installed, skipping (no version tags)"
+        exit 0
+    fi
+    echo "$PKG: building latest main"
+    rm -rf "$DEPS_DIR/lua-5.5.0"
+elif dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
     echo "$PKG already installed"
     exit 0
 fi
