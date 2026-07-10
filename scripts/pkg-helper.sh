@@ -9,7 +9,7 @@ mkdir -p "$PKG_OUT" "$DEPS_DIR"
 export CC=gcc-15
 export CXX=g++-15
 export PATH="$BASE_DIR/prefix/bin:$PATH"
-export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:${PKG_CONFIG_PATH:-}"
+export PKG_CONFIG_PATH="$BASE_DIR/prefix/lib/pkgconfig:$BASE_DIR/prefix/lib/x86_64-linux-gnu/pkgconfig:$BASE_DIR/prefix/share/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig:${PKG_CONFIG_PATH:-}"
 
 # get_latest_version REPO TAG_PREFIX
 # Fetches latest version from a git remote. TAG_PREFIX is stripped from the tag name.

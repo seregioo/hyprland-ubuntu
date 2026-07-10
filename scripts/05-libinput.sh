@@ -34,4 +34,4 @@ STAGE="$DEPS_DIR/${PKG}_${VER}_amd64"
 rm -rf "$STAGE"
 DESTDIR="$STAGE" ninja -C build install
 
-make_deb "$PKG" "$VER" "libinput input device library (Hyprland build)" "$STAGE" "libudev1, libseat1"
+make_deb "$PKG" "$VER" "libinput input device library (Hyprland build)" "$STAGE" "libudev1, libseat1" "libinput10, libinput-bin"
