@@ -138,17 +138,64 @@ fi
 
 echo ""
 echo "--- Optional extras ---"
-echo "The following can also be built as .deb packages:"
+echo "The following can also be built as .deb packages."
+echo "Enter the numbers separated by spaces (e.g. '1 2 5'), or 'all' for everything."
+echo ""
 echo "  1) rofi-wayland  - Window switcher, app launcher (Wayland fork)"
 echo "  2) hyprlock      - Hyprland's GPU-accelerated screen locker"
-echo "  3) dunst         - Lightweight notification daemon"
-echo "  4) awww          - Animated wallpaper daemon for Wayland"
+echo "  3) awww          - Animated wallpaper daemon for Wayland"
+echo "  4) hyprpicker    - Hyprland color picker"
+echo "  5) swayosd       - On-screen display for volume/brightness/Caps Lock"
 echo ""
-read -p "Install extras? [y/N]: " answer
-if [[ "$answer" =~ ^[Yy]$ ]]; then
+echo "  Notification daemon (pick one):"
+echo "  6) dunst         - Lightweight notification daemon"
+echo "  7) swaync        - Notification center with GTK panel"
+echo ""
+read -p "Choose extras [numbers/all/N]: " extras_choice
+
+if [[ -n "$extras_choice" && ! "$extras_choice" =~ ^[Nn]$ ]]; then
     EXTRAS_DIR="$(dirname $SCRIPT_DIR)/scripts-extras"
-    for extra in "$EXTRAS_DIR"/*.bash; do
-        echo "  → $(basename $extra)"
-        bash "$extra"
+
+    declare -A EXTRA_MAP=(
+        [1]="rofi.bash"
+        [2]="hyprlock.bash"
+        [3]="awww.bash"
+        [4]="hyprpicker.bash"
+        [5]="swayosd.bash"
+        [6]="dunst.bash"
+        [7]="swaync.bash"
+    )
+
+    if [[ "$extras_choice" == "all" ]]; then
+        choices="1 2 3 4 5"
+        echo ""
+        echo "  Notification daemon:"
+        echo "    6) dunst"
+        echo "    7) swaync"
+        read -p "  Choose one [6/7]: " notif_choice
+        choices="$choices $notif_choice"
+    else
+        # Check for conflicting notification daemons
+        if [[ "$extras_choice" =~ 6 && "$extras_choice" =~ 7 ]]; then
+            echo ""
+            echo "  dunst and swaync conflict — pick one:"
+            echo "    6) dunst"
+            echo "    7) swaync"
+            read -p "  Choose one [6/7]: " notif_choice
+            choices=$(echo "$extras_choice" | tr ' ' '\n' | grep -v '^[67]$')
+            choices="$choices $notif_choice"
+        else
+            choices="$extras_choice"
+        fi
+    fi
+
+    for num in $choices; do
+        script="${EXTRA_MAP[$num]:-}"
+        if [[ -n "$script" && -f "$EXTRAS_DIR/$script" ]]; then
+            echo "  → $script"
+            bash "$EXTRAS_DIR/$script"
+        elif [[ -n "$num" ]]; then
+            echo "  ⚠ Unknown option: $num (skipped)"
+        fi
     done
 fi
