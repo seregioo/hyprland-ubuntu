@@ -2,26 +2,26 @@
 set -e
 source "$(dirname "$0")/../../scripts/pkg-helper.sh"
 
-# --- gtk4-layer-shell (not packaged for Ubuntu 24.04) ---
-PKG=gtk4-layer-shell
-VER=1.1.0
-REPO=https://github.com/wmww/gtk4-layer-shell.git
+# --- libadwaita (Ubuntu 24.04 ships 1.5.0, SwayNC 0.12.x needs >= 1.6.1) ---
+PKG=libadwaita-hypr
+VER=1.6.4
+REPO=https://gitlab.gnome.org/GNOME/libadwaita.git
 
 if [[ "${UPDATE_MODE:-0}" == "1" ]]; then
-    NEW_VER=$(get_latest_version "$REPO" "v")
+    NEW_VER=$(get_latest_version "$REPO" "1.6.")
     if [[ -n "$NEW_VER" ]]; then VER="$NEW_VER"; fi
     if [[ "$(installed_version $PKG)" == "$VER" ]]; then
         echo "$PKG: already at $VER, skipping"
         exit 0
     fi
     echo "$PKG: updating to $VER"
-    rm -rf "$DEPS_DIR/gtk4-layer-shell"
+    rm -rf "$DEPS_DIR/libadwaita-src"
 elif dpkg -l "$PKG" 2>/dev/null | grep -q "^ii"; then
     echo "$PKG already installed"
     exit 0
 fi
 
-echo "=== Building gtk4-layer-shell $VER ==="
+echo "=== Building libadwaita $VER ==="
 
 # Requires our custom GTK4 to be installed first
 if ! pkg-config --atleast-version=4.16.0 gtk4 2>/dev/null; then
@@ -30,23 +30,28 @@ if ! pkg-config --atleast-version=4.16.0 gtk4 2>/dev/null; then
 fi
 
 sudo apt-get install -y \
-    libwayland-dev \
+    libappstream-dev libfribidi-dev \
     gobject-introspection libgirepository1.0-dev \
-    valac gtk-doc-tools 2>&1 | tail -5
+    valac sassc 2>&1 | tail -5
 
 cd "$DEPS_DIR"
-if [ ! -d "gtk4-layer-shell" ]; then
-    git clone --depth 1 --branch "v$VER" "$REPO"
+if [ ! -d "libadwaita-src" ]; then
+    git clone --depth 1 --branch "$VER" "$REPO" libadwaita-src
 fi
 
-cd gtk4-layer-shell
+cd libadwaita-src
 rm -rf build
-meson setup build --prefix=/usr --buildtype=release -Dtests=false -Dexamples=false -Ddocs=false
+meson setup build --prefix=/usr --buildtype=release \
+    -Dintrospection=enabled \
+    -Dvapi=true \
+    -Dgtk_doc=false \
+    -Dtests=false \
+    -Dexamples=false
 ninja -C build
 
 STAGE="$DEPS_DIR/${PKG}_${VER}_amd64"
 rm -rf "$STAGE"
 DESTDIR="$STAGE" ninja -C build install
 
-make_deb "$PKG" "$VER" "GTK4 library for Wayland Layer Shell protocol" "$STAGE" \
-    "gtk4-hypr, libwayland-client0"
+make_deb "$PKG" "$VER" "GTK4 Adwaita widget library (built from source for Hyprland extras)" "$STAGE" \
+    "gtk4-hypr, libglib2.0-0t64, libappstream5"
